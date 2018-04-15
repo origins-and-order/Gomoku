@@ -48,7 +48,6 @@ class Gomoku:
         self.__numeric_board = np.arange(size ** 2).reshape((size, size))
 
         # generate monomial bank and scores
-        self.__monomial_bank = None
         self.__scores = None
 
         self.__score_board = {
@@ -105,7 +104,6 @@ class Gomoku:
         for i in range(self.__size ** 2):
             assert len(neighbors[i]) == scores[i]
 
-        self.__monomial_bank = monomials
         self.__scores = scores.reshape((self.__size, self.__size))
         self.__neighboring_monomial = neighbors
 
@@ -208,41 +206,30 @@ class Gomoku:
 
         del state, moves
 
-    # TODO merge both update and decrease score
+    def update(self, coordinate, color, operation, start, weight=5):
+        """Subroutine to update play score board."""
+        inverted_operation = np.subtract if operation == np.add else np.add
+        monomials_to_update = monomial_generator(self.__numeric_board, coordinate)
+        a, b = coordinate
+        number_coordinate = self.__numeric_board[a, b]
+        for monomial in monomials_to_update:
+            i = start
+            monomial = sorted(monomial)
+            monomial = monomial if monomial[0] == number_coordinate else monomial[::-1]
+            for number in monomial:
+                x, y = np.argwhere(self.__numeric_board == number)[0]
+                self.__score_board[color][x, y] = operation(self.__score_board[color][x, y], i * weight ** 2)
+                i = inverted_operation(i, 1)
 
     def update_score(self, coordinate, color, weight=5):
-        monomials_to_update = monomial_generator(self.__numeric_board, coordinate)
-        a, b = coordinate
-        number_coordinate = self.__numeric_board[a, b]
-        for monomial in monomials_to_update:
-            i = 5
-            monomial = sorted(monomial)
-            monomial = monomial if monomial[0] == number_coordinate else monomial[::-1]
-            for number in monomial:
-                x, y = np.argwhere(self.__numeric_board == number)[0]
-                self.__score_board[color][
-                    x, y
-                ] += i * weight ** 2  # todo no idea but this works lmao
-                i -= 1
-
-    def decrease_score(self, coordinate, color, weight=5):
+        """Update player's score board"""
+        self.update(coordinate, color, np.add, 5, weight)
         color = "white" if color == "black" else "white"
-        a, b = coordinate
-        number_coordinate = self.__numeric_board[a, b]
-        monomials_to_update = monomial_generator(self.__numeric_board, coordinate)
-        for monomial in monomials_to_update:
-            i = 1
-            monomial = sorted(monomial)
-            monomial = monomial if monomial[0] == number_coordinate else monomial[::-1]
-            for number in monomial:
-                x, y = np.argwhere(self.__numeric_board == number)[0]
-                self.__score_board[color][x, y] -= i * weight ** 2
-                i += 1
+        self.update(coordinate, color, np.subtract, 1, weight)
 
     def render_move(self, coordinate, color):
         x, y = coordinate
         self.update_score(coordinate, color)
-        self.decrease_score(coordinate, color)
         self.__available_moves[x, y] = 2 if color == "white" else 1
         self.__player_moves[color].append(coordinate)
         self.__ax.plot(
