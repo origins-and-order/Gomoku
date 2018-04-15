@@ -135,8 +135,7 @@ class Gomoku:
 
     def make_move(self, color, open_ns):
         assert type(color) == str
-        # print(f'length of open_ns {len(open_ns)}')
-        # score open ns
+
         scores = []
         for open__ in open_ns:
             scores.append(sum(self.__score_board[color].flatten()[[open__]]))
@@ -146,34 +145,17 @@ class Gomoku:
 
         monomial_n = list(open_ns[max_score])
 
-        # print(f'monomial_n: {monomial_n}')
-        # find adjacent piece
-        # TODO pick a monomial from the player to block that also benefits the ai
-        """for i in range(len(monomial_n)):
-            available_move = np.argwhere(self.__numeric_board == monomial_n[i])[0]
-            x, y = available_move
-            if self.__available_moves[x, y] == 0:
-                unavailable_move = np.argwhere(self.__numeric_board == monomial_n[i])[0]
-                a, b = unavailable_move"""
-
         # filter non zeros out
-        zeros = np.argwhere(self.__available_moves.flatten()[[monomial_n]] == 0)
+        zeros = np.argwhere(self.__available_moves.flatten()[[monomial_n]] == 0).flatten()
 
-        # figure which zero has a greater score
-        max_zero = int(zeros[0][0])
+        # convert non zeros to cells on the board
+        non_zero_numbers = np.array(monomial_n)[zeros]
 
-        # find max value of opponent board
-        for zero in zeros[1:]:
-            value_1 = self.__score_board[color].flatten()[monomial_n[zero[0]]]
-            value_2 = self.__score_board[color].flatten()[monomial_n[max_zero]]
-            if value_1 > value_2:
-                max_zero = int(zero)
+        # get the values from the respective score board
+        score_board_values = self.__score_board[color].flatten()[non_zero_numbers]
 
-        # todo get rid of this if statement block, looks like crap
-        if type(max_zero) == list:
-            max_number = monomial_n[max_zero[0]]
-        else:
-            max_number = monomial_n[max_zero]
+        # get index of max score and get value from `non_zero_numbers` with that index
+        max_number = non_zero_numbers[np.argmax(score_board_values)]
 
         # render piece
         x, y = np.argwhere(self.__numeric_board == max_number)[0]
