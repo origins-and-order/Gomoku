@@ -144,7 +144,9 @@ class Gomoku:
         monomial_n = list(open_ns[max_score])
 
         # filter non zeros out
-        zeros = np.argwhere(self.__available_moves.flatten()[[monomial_n]] == 0).flatten()
+        zeros = np.argwhere(
+            self.__available_moves.flatten()[[monomial_n]] == 0
+        ).flatten()
 
         # convert non zeros to cells on the board
         non_zero_numbers = np.array(monomial_n)[zeros]
@@ -160,53 +162,48 @@ class Gomoku:
         self.render_move([x, y], "black")
 
     def __ai_move(self):
-        """Make a move."""
-        state = np.copy(self.__available_moves)
+        """Make move based on score boards."""
+        state = self.__available_moves
         moves = self.__player_moves
         color = "black"
 
         monomial_length_black = max_monomial_length(
-            self.__size,
-            state,
-            "black",
-            self.__numeric_board,
-            self.__neighboring_monomial,
+            size=self.__size,
+            state=state,
+            color="black",
+            numeric_board=self.__numeric_board,
+            neighboring_monomials=self.__neighboring_monomial,
         )
         monomial_length_white = max_monomial_length(
-            self.__size,
-            state,
-            "white",
-            self.__numeric_board,
-            self.__neighboring_monomial,
+            size=self.__size,
+            state=state,
+            color="white",
+            numeric_board=self.__numeric_board,
+            neighboring_monomials=self.__neighboring_monomial,
         )
+
         length = monomial_length_black
 
-        # print(f'max open for black is: {monomial_length_black}')
-        # print(f'max open for white is: {monomial_length_white}')
-
-        condition_1 = monomial_length_white >= 3
-
-        if condition_1:
-            # print('changed to defense')
+        if monomial_length_white >= 3:
             color = "white"
             length = monomial_length_white
 
-        color = 1 if color == "black" else 2
+        color_number = 1 if color == "black" else 2
+
         open_ns = open_n(
             state=state,
             numeric_board=self.__numeric_board,
             stride=5,
             size=self.__size,
             neighboring_monomials=self.__neighboring_monomial,
-            color=color,
+            color=color_number,
             count=length,
         )
-        color = "black" if color == 1 else "white"
-        self.make_move(color, open_ns)
 
+        self.make_move(color, open_ns)
         del state, moves
 
-    def update(self, coordinate, color, operation, start, weight=5):
+    def update(self, coordinate, color, operation, start, weight=5, factor=1):
         """Subroutine to update play score board."""
         inverted_operation = np.subtract if operation == np.add else np.add
         monomials_to_update = monomial_generator(self.__numeric_board, coordinate)
@@ -218,12 +215,14 @@ class Gomoku:
             monomial = monomial if monomial[0] == number_coordinate else monomial[::-1]
             for number in monomial:
                 x, y = np.argwhere(self.__numeric_board == number)[0]
-                self.__score_board[color][x, y] = operation(self.__score_board[color][x, y], i * weight ** 2)
+                self.__score_board[color][x, y] = operation(
+                    self.__score_board[color][x, y], i * weight ** factor
+                )
                 i = inverted_operation(i, 1)
 
     def update_score(self, coordinate, color, weight=5):
         """Update player's score board"""
-        self.update(coordinate, color, np.add, 5, weight)
+        self.update(coordinate, color, np.add, 5, weight, 3)
         color = "white" if color == "black" else "white"
         self.update(coordinate, color, np.subtract, 1, weight)
 

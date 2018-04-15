@@ -53,12 +53,9 @@ def max_monomial_length(size, state, color, numeric_board, neighboring_monomials
     assert type(color) == str
     color = 1 if color == "black" else 2
     length = 0
-    # monomials = []
-    # for stride in range(1, 6):  # 1-5
-    for count in range(1, 6):  # 1-4
+    for count in range(1, 6):
         stuff = open_n(state, numeric_board, 5, size, neighboring_monomials, color, count)
         length_temp = len(stuff)
         if length_temp > 0 and length_temp > length:
             length = count
-            # break
     return length
