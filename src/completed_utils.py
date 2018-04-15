@@ -1,32 +1,7 @@
 import numpy as np
 
 
-def all_neighboring_monomials(player_moves, numeric_board, neighboring_monomial, color):
-    """
-    Finds all monomials that can be played from color.
-    Searches through all color's move, then find the number associated
-    with the move's coordinate in `self.__numeric_board`
-    then find all the monomials that contain the numeric representation
-    of move's coordinates.
-
-    :param color:
-    :return: monomials that contain move's numeric representation
-    """
-    assert type(player_moves) == dict
-    assert type(neighboring_monomial) == dict
-    assert type(numeric_board) == np.ndarray
-    assert type(color) == str
-
-    possible_monomials = []
-    for move in player_moves[color]:
-        x, y = move
-        number = int(numeric_board[x, y])
-        assert type(number) == int
-        possible_monomials += neighboring_monomial[number]
-    return possible_monomials
-
-
-# todo redo
+# TODO redo
 def terminal_state(state, moves, color, stride=5, size=19):
     """
     Check if board is in terminal state.
