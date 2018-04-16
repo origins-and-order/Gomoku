@@ -1,47 +1,46 @@
 import numpy as np
 
 
-# TODO redo
-def terminal_state(state, moves, color, stride=5, size=19):
-    """
-    Check if board is in terminal state.
-    Terminal states are: winning or tie.
-    :return: boolean True if in terminal state otherwise False
-    """
-    for move in moves[color]:
+def terminal_state(state, numeric_board, color, stride=5, size=19):
+    # for rows and columns
+    for i in range(size):
+        for j in range(size - stride + 1):
+            if np.unique(state[i, j:j + stride]).size == 1 and np.unique(
+                state[i, j:j + stride]
+            )[
+                0
+            ] != 0:
+                return numeric_board[i, j:j + stride]
 
-        # Unpack coordinates.
-        x, y = move
+            elif np.unique(state[j:j + stride, i]).size == 1 and np.unique(
+                state[j:j + stride, i]
+            )[
+                0
+            ] != 0:
+                return numeric_board[j:j + stride, i]
 
-        # Checks for winning state.
-        if x + stride < size and y + stride < size:
+    # for diagonals
+    for i in range(size - stride + 1):
+        for j in range(size - stride + 1):
+            if np.unique(
+                state[i:i + stride, j:j + stride].diagonal()
+            ).size == 1 and np.unique(
+                state[i:i + stride, j:j + stride].diagonal()
+            )[
+                0
+            ] != 0:
+                return numeric_board[i:i + stride, j:j + stride].diagonal()
 
-            # Get row and column.
-            row = state[x, y:y + stride]
-            column = state[x:x + stride, y]
+            elif np.unique(
+                np.fliplr(state)[i:i + stride, j:j + stride].diagonal()
+            ).size == 1 and np.unique(
+                np.fliplr(state)[i:i + stride, j:j + stride].diagonal()
+            )[
+                0
+            ] != 0:
+                return np.fliplr(numeric_board)[i:i + stride, j:j + stride].diagonal()
 
-            # Get diagonals.
-            diagonal = state[x:x + stride, y:y + stride]
-            right_diagonal = diagonal.diagonal()
-            left_diagonal = np.fliplr(diagonal).diagonal()
-
-            # Put selections in a list to iterate over.
-            selections = [row, column, right_diagonal, left_diagonal]
-
-            # Check if any selection have 5 of the same elements
-            for selection in selections:
-                if np.unique(selection).size == 1 and selection[0] != 0:
-                    del selections, selection
-                    return True
-
-    # check for tie state.
-    if sorted(np.unique(state).tolist()) == [1, 2]:
-        del moves
-        return True
-
-    # return false for non-terminal state.
-    del moves
-    return False
+    return None
 
 
 def monomial_generator(numeric_board, coordinate, stride=5):
@@ -60,5 +59,3 @@ def monomial_generator(numeric_board, coordinate, stride=5):
     return list(
         map(lambda a: a.tolist(), filter(lambda a: len(a) == stride, monomials))
     )
-
-

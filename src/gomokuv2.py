@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-
+from matplotlib import lines as lines
 from .completed_utils import monomial_generator
 from .completed_utils import terminal_state
 
@@ -18,7 +18,7 @@ class Gomoku:
         # draw the board
         self.__fig = plt.figure(figsize=[width, height])
         self.__fig.patch.set_facecolor((1, 1, .8))
-        self.__ax = self.__fig.add_subplot(111)
+        self.__ax = self.__fig.add_subplot(1, 1, 1)
 
         for i in range(size):
             self.__ax.plot([i, i], [0, size - 1], "k")
@@ -60,10 +60,10 @@ class Gomoku:
         self.__generate_monomials_and_scores()
 
         # for number labels
-        for number in self.__numeric_board.flatten():
-            self.__ax.annotate(
-                str(number), np.argwhere(self.__numeric_board == number)[0]
-            )
+        # for number in self.__numeric_board.flatten():
+        #     self.__ax.annotate(
+        #         str(number), np.argwhere(self.__numeric_board == number)[0]
+        #     )
 
         # computer's first move
         # find max score in self.__score and use that coordinate for first move
@@ -121,22 +121,27 @@ class Gomoku:
 
             # check for terminal states
             state = self.__available_moves
-            moves = self.__player_moves
 
-            terminal_black = terminal_state(state, moves, "black")
-            terminal_white = terminal_state(state, moves, "white")
+            terminal_black = terminal_state(state, self.__numeric_board, "black")
+            terminal_white = terminal_state(state, self.__numeric_board, "white")
             # todo redo terminal state sucks at evaluating
-            if terminal_black:
-                print("Black is in terminal state.")
-            if terminal_white:
-                print("White is in terminal state.")
+            if terminal_black is not None:
+                terminal_black = sorted(terminal_black)
+                x = np.argwhere(self.__numeric_board == terminal_black[0])[0]
+                print(f'x: {x}')
+                y = np.argwhere(self.__numeric_board == terminal_black[-1])[0]
+                print(f'y: {y}')
+                self.render_line(x, y)
+            # if terminal_white is not None:
+            #     print("White is in terminal state.")
 
     def make_move(self, color, open_ns):
+        """For AI move."""
         assert type(color) == str
 
         scores = []
         for open__ in open_ns:
-            scores.append(sum(self.__score_board[color].flatten()[[open__]]))
+            scores.append(np.sum(self.__score_board[color].flatten()[[open__]]))
 
         # TODO BREAKS HERE STAHP
         max_score = int(np.argmax(np.array(scores)))
@@ -203,8 +208,8 @@ class Gomoku:
         self.make_move(color, open_ns)
         del state, moves
 
-    def update(self, coordinate, color, operation, start, weight=5, factor=1):
-        """Subroutine to update play score board."""
+    def __update(self, coordinate, color, operation, start, weight=5, factor=1):
+        """Subroutine to update player's score board."""
         inverted_operation = np.subtract if operation == np.add else np.add
         monomials_to_update = monomial_generator(self.__numeric_board, coordinate)
         a, b = coordinate
@@ -221,12 +226,13 @@ class Gomoku:
                 i = inverted_operation(i, 1)
 
     def update_score(self, coordinate, color, weight=5):
-        """Update player's score board"""
-        self.update(coordinate, color, np.add, 5, weight, 3)
+        """Update player's score board."""
+        self.__update(coordinate, color, np.add, 5, weight, 3)
         color = "white" if color == "black" else "white"
-        self.update(coordinate, color, np.subtract, 1, weight)
+        self.__update(coordinate, color, np.subtract, 1, weight)
 
     def render_move(self, coordinate, color):
+        """Render a players move."""
         x, y = coordinate
         self.update_score(coordinate, color)
         self.__available_moves[x, y] = 2 if color == "white" else 1
@@ -236,7 +242,15 @@ class Gomoku:
             "o",
             markersize=28,
             markeredgecolor=(0, 0, 0),
-            markerfacecolor="green" if color == "black" else "w",
+            markerfacecolor="k" if color == "black" else "w",
             markeredgewidth=1
         )
+        self.__fig.canvas.draw()
+
+    def render_line(self, p1, p2):
+        """Render a line indicating a terminal state."""
+        x = sorted([p1[0], p2[0]])
+        y = sorted([p1[1], p2[1]])
+        print(f'test: \nx: {x}\ny: {y}')
+        self.__ax.add_line(lines.Line2D(x, y))
         self.__fig.canvas.draw()
