@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 from matplotlib import image
 from matplotlib import lines as lines
 
-
 from random import choice
 
 from .utils import monomial_generator
@@ -57,6 +56,7 @@ class Gomoku:
         # generate monomial bank and scores
         self.__scores = None
 
+        # determine what move to use
         self.__score_board = {
             "black": np.zeros((size, size), dtype=int),
             "white": np.zeros((size, size), dtype=int),
@@ -71,12 +71,14 @@ class Gomoku:
         # for images
         self.stone_images = {
             "black": image.imread('./assets/black_stone.png'),
-            "white": image.imread('./assets/white_stone.png')
+            "white": image.imread('./assets/white_stone.png'),
+            "red": image.imread('./assets/red_stone.png')
         }
 
         self.stone_image_boxes = {
             "black": OffsetImage(self.stone_images["black"], zoom=.025),
-            "white": OffsetImage(self.stone_images["white"], zoom=.025)
+            "white": OffsetImage(self.stone_images["white"], zoom=.025),
+            "red": OffsetImage(self.stone_images["red"], zoom=.025),
         }
 
         # generate table for values associated with all the monomials they belong to
@@ -151,14 +153,16 @@ class Gomoku:
 
             if terminal_white is not None:
                 terminal_white = sorted(terminal_white)
-                x = np.argwhere(self.__numeric_board == terminal_white[0])[0]
-                y = np.argwhere(self.__numeric_board == terminal_white[-1])[0]
-                self.render_line(x, y)
+                # x = np.argwhere(self.__numeric_board == terminal_white[0])[0]
+                # y = np.argwhere(self.__numeric_board == terminal_white[-1])[0]
+                self.render_terminal_state(terminal_white)
+                # self.render_line(x, y)
             elif terminal_black is not None:
                 terminal_black = sorted(terminal_black)
-                x = np.argwhere(self.__numeric_board == terminal_black[0])[0]
-                y = np.argwhere(self.__numeric_board == terminal_black[-1])[0]
-                self.render_line(x, y)
+                # x = np.argwhere(self.__numeric_board == terminal_black[0])[0]
+                # y = np.argwhere(self.__numeric_board == terminal_black[-1])[0]
+                # self.render_line(x, y)
+                self.render_terminal_state(terminal_black)
 
     def make_move(self, color, open_ns):
         """For AI move."""
@@ -215,6 +219,7 @@ class Gomoku:
 
         length = monomial_length_black
 
+        # TODO redo this block
         if self.last_max_size["black"] == 4 and self.last_max_size["white"] <= monomial_length_white:
             length = self.last_max_size["black"]
         elif monomial_length_white >= 3 and monomial_length_black < 4:
@@ -273,10 +278,17 @@ class Gomoku:
         self.__ax.add_artist(ab)
         self.__fig.canvas.draw()
 
-    def render_line(self, p1, p2):
-        """Render a line indicating a terminal state."""
-        x = sorted([p1[0], p2[0]])
-        y = sorted([p1[1], p2[1]])
-        print(f'test: \nx: {x}\ny: {y}')
-        self.__ax.add_line(lines.Line2D(x, y))
+    def render_terminal_state(self, monomial):
+
+        for number in monomial:
+            coordinate = np.argwhere(self.__numeric_board == number)[0]
+            ab = AnnotationBbox(self.stone_image_boxes["red"], coordinate, frameon=False)
+            self.__ax.add_artist(ab)
         self.__fig.canvas.draw()
+    # def render_line(self, p1, p2):
+    #     """Render a line indicating a terminal state."""
+    #     x = sorted([p1[0], p2[0]])
+    #     y = sorted([p1[1], p2[1]])
+    #     print(f'test: \nx: {x}\ny: {y}')
+    #     self.__ax.add_line(lines.Line2D(x, y))
+    #     self.__fig.canvas.draw()
