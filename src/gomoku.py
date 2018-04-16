@@ -1,15 +1,18 @@
 import numpy as np
 
+from matplotlib.offsetbox import AnnotationBbox
+from matplotlib.offsetbox import OffsetImage
 from matplotlib import pyplot as plt
+from matplotlib import image
 from matplotlib import lines as lines
-from random import choice
 
+
+from random import choice
 
 from .utils import monomial_generator
 from .utils import max_monomial_length
 from .utils import open_n
 from .utils import terminal_state
-
 
 
 class Gomoku:
@@ -18,6 +21,8 @@ class Gomoku:
     def __init__(self, size=19, monomial_size=5, width=8, height=8):
 
         # draw the board
+        plt.rcParams['toolbar'] = 'None'
+
         self.__fig = plt.figure(figsize=[width, height])
         self.__fig.patch.set_facecolor((1, 1, .8))
         self.__ax = self.__fig.add_subplot(1, 1, 1)
@@ -57,22 +62,32 @@ class Gomoku:
             "white": np.zeros((size, size), dtype=int),
         }
 
-        # hint at future move
+        # for future move
         self.last_max_size = {
             "black": 0,
             "white": 0
         }
 
+        # for images
+        self.stone_images = {
+            "black": image.imread('./assets/black_stone.png'),
+            "white": image.imread('./assets/white_stone.png')
+        }
+
+        self.stone_image_boxes = {
+            "black": OffsetImage(self.stone_images["black"], zoom=.025),
+            "white": OffsetImage(self.stone_images["white"], zoom=.025)
+        }
 
         # generate table for values associated with all the monomials they belong to
         self.__neighboring_monomial = None
         self.__generate_monomials_and_scores()
 
         # for number labels
-        for number in self.__numeric_board.flatten():
-            self.__ax.annotate(
-                str(number), np.argwhere(self.__numeric_board == number)[0]
-            )
+        # for number in self.__numeric_board.flatten():
+        #     self.__ax.annotate(
+        #         str(number), np.argwhere(self.__numeric_board == number)[0]
+        #     )
 
         # computer's first move
         # find max score in self.__score and use that coordinate for first move
@@ -201,11 +216,13 @@ class Gomoku:
         length = monomial_length_black
 
         if self.last_max_size["black"] == 4 and self.last_max_size["white"] <= monomial_length_white:
-            print('bkfst')
-            pass
+            length = self.last_max_size["black"]
         elif monomial_length_white >= 3 and monomial_length_black < 4:
             color = "white"
             length = monomial_length_white
+
+        self.last_max_size["black"] = monomial_length_black
+        self.last_max_size["white"] = monomial_length_white
 
         color_number = 1 if color == "black" else 2
 
@@ -220,21 +237,6 @@ class Gomoku:
         )
 
         self.make_move(color, open_ns)
-
-        self.last_max_size["black"] = max_monomial_length(
-            size=self.__size,
-            state=state,
-            color="black",
-            numeric_board=self.__numeric_board,
-            neighboring_monomials=self.__neighboring_monomial,
-        )
-        self.last_max_size["white"] = max_monomial_length(
-            size=self.__size,
-            state=state,
-            color="white",
-            numeric_board=self.__numeric_board,
-            neighboring_monomials=self.__neighboring_monomial,
-        )
 
         del state, moves
 
@@ -262,19 +264,13 @@ class Gomoku:
         self.__update(coordinate, color, np.subtract, 1, weight)
 
     def render_move(self, coordinate, color):
-        """Render a players move."""
+        """Render a players move with image of a stone."""
         x, y = coordinate
         self.update_score(coordinate, color)
         self.__available_moves[x, y] = 2 if color == "white" else 1
         self.__player_moves[color].append(coordinate)
-        self.__ax.plot(
-            *coordinate,
-            "o",
-            markersize=28,
-            markeredgecolor=(0, 0, 0),
-            markerfacecolor="green" if color == "black" else "w",
-            markeredgewidth=1
-        )
+        ab = AnnotationBbox(self.stone_image_boxes[color], coordinate, frameon=False)
+        self.__ax.add_artist(ab)
         self.__fig.canvas.draw()
 
     def render_line(self, p1, p2):

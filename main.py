@@ -1,6 +1,6 @@
-from src import gomokuv2
+from src.gomoku import Gomoku
 from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
-    gk = gomokuv2.Gomoku()
+    gk = Gomoku()
     plt.show()
