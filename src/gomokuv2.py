@@ -4,11 +4,12 @@ from matplotlib import pyplot as plt
 from matplotlib import lines as lines
 from random import choice
 
-from .completed_utils import monomial_generator
-from .completed_utils import terminal_state
 
+from .utils import monomial_generator
 from .utils import max_monomial_length
 from .utils import open_n
+from .utils import terminal_state
+
 
 
 class Gomoku:
