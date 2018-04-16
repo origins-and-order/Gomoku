@@ -1,13 +1,14 @@
 import numpy as np
+
 from matplotlib import pyplot as plt
 from matplotlib import lines as lines
+from random import choice
+
 from .completed_utils import monomial_generator
 from .completed_utils import terminal_state
 
 from .utils import max_monomial_length
 from .utils import open_n
-
-from random import choice
 
 
 class Gomoku:
@@ -55,15 +56,22 @@ class Gomoku:
             "white": np.zeros((size, size), dtype=int),
         }
 
+        # hint at future move
+        self.last_max_size = {
+            "black": 0,
+            "white": 0
+        }
+
+
         # generate table for values associated with all the monomials they belong to
         self.__neighboring_monomial = None
         self.__generate_monomials_and_scores()
 
         # for number labels
-        # for number in self.__numeric_board.flatten():
-        #     self.__ax.annotate(
-        #         str(number), np.argwhere(self.__numeric_board == number)[0]
-        #     )
+        for number in self.__numeric_board.flatten():
+            self.__ax.annotate(
+                str(number), np.argwhere(self.__numeric_board == number)[0]
+            )
 
         # computer's first move
         # find max score in self.__score and use that coordinate for first move
@@ -124,16 +132,17 @@ class Gomoku:
 
             terminal_black = terminal_state(state, self.__numeric_board, "black")
             terminal_white = terminal_state(state, self.__numeric_board, "white")
-            # todo redo terminal state sucks at evaluating
-            if terminal_black is not None:
+
+            if terminal_white is not None:
+                terminal_white = sorted(terminal_white)
+                x = np.argwhere(self.__numeric_board == terminal_white[0])[0]
+                y = np.argwhere(self.__numeric_board == terminal_white[-1])[0]
+                self.render_line(x, y)
+            elif terminal_black is not None:
                 terminal_black = sorted(terminal_black)
                 x = np.argwhere(self.__numeric_board == terminal_black[0])[0]
-                print(f'x: {x}')
                 y = np.argwhere(self.__numeric_board == terminal_black[-1])[0]
-                print(f'y: {y}')
                 self.render_line(x, y)
-            # if terminal_white is not None:
-            #     print("White is in terminal state.")
 
     def make_move(self, color, open_ns):
         """For AI move."""
@@ -179,6 +188,7 @@ class Gomoku:
             numeric_board=self.__numeric_board,
             neighboring_monomials=self.__neighboring_monomial,
         )
+
         monomial_length_white = max_monomial_length(
             size=self.__size,
             state=state,
@@ -189,7 +199,10 @@ class Gomoku:
 
         length = monomial_length_black
 
-        if monomial_length_white >= 3:
+        if self.last_max_size["black"] == 4 and self.last_max_size["white"] <= monomial_length_white:
+            print('bkfst')
+            pass
+        elif monomial_length_white >= 3 and monomial_length_black < 4:
             color = "white"
             length = monomial_length_white
 
@@ -206,6 +219,22 @@ class Gomoku:
         )
 
         self.make_move(color, open_ns)
+
+        self.last_max_size["black"] = max_monomial_length(
+            size=self.__size,
+            state=state,
+            color="black",
+            numeric_board=self.__numeric_board,
+            neighboring_monomials=self.__neighboring_monomial,
+        )
+        self.last_max_size["white"] = max_monomial_length(
+            size=self.__size,
+            state=state,
+            color="white",
+            numeric_board=self.__numeric_board,
+            neighboring_monomials=self.__neighboring_monomial,
+        )
+
         del state, moves
 
     def __update(self, coordinate, color, operation, start, weight=5, factor=1):
@@ -242,7 +271,7 @@ class Gomoku:
             "o",
             markersize=28,
             markeredgecolor=(0, 0, 0),
-            markerfacecolor="k" if color == "black" else "w",
+            markerfacecolor="green" if color == "black" else "w",
             markeredgewidth=1
         )
         self.__fig.canvas.draw()
