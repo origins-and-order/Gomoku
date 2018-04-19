@@ -1,3 +1,11 @@
+#
+#
+#
+#
+#
+#
+#
+#
 from src.gomoku import Gomoku
 from matplotlib import pyplot as plt
 

@@ -1,5 +1,14 @@
+#
+#
+#
+#
+#
+#
+#
+#
 import numpy as np
 
+from functools import reduce
 from matplotlib.offsetbox import AnnotationBbox
 from matplotlib.offsetbox import OffsetImage
 from matplotlib import pyplot as plt
@@ -8,8 +17,8 @@ from matplotlib import lines as lines
 
 from random import choice
 
-from .utils import monomial_generator
 from .utils import max_monomial_length
+from .utils import monomial_generator
 from .utils import open_n
 from .utils import terminal_state
 
@@ -18,6 +27,13 @@ class Gomoku:
     """Version 2, uses open player 3 policy."""
 
     def __init__(self, size=19, monomial_size=5, width=8, height=8):
+        """
+
+        :param size:
+        :param monomial_size:
+        :param width:
+        :param height:
+        """
 
         # draw the board
         plt.rcParams['toolbar'] = 'None'
@@ -99,7 +115,7 @@ class Gomoku:
         self.render_move(optimal_move, "black")
 
         # bind method to click
-        self.__fig.canvas.mpl_connect("button_press_event", self.__click)
+        self.__fig.canvas.mpl_connect("button_press_event", self.__button_press)
 
     def __generate_monomials_and_scores(self):
         """
@@ -136,45 +152,92 @@ class Gomoku:
         # release memory
         del monomials, scores, neighbors
 
-    def __click(self, event):
+    def __button_press(self, event):
+        """
+
+        :param event:
+        :return:
+        """
         plot_x = int(round(event.xdata))
         plot_y = int(round(event.ydata))
-        if self.__available_moves[plot_x, plot_y] in [1, 2]:
-            print("Cannot place piece here.")
-        else:
+
+        if self.__available_moves[plot_x, plot_y] not in [1, 2]:
+
             self.render_move([plot_x, plot_y], "white")
             self.__ai_move()
 
             # check for terminal states
             state = self.__available_moves
+            size = self.__size
+            stride = self.__monomial_size
+            numeric_board = self.__numeric_board
 
-            terminal_black = terminal_state(state, self.__numeric_board, "black")
-            terminal_white = terminal_state(state, self.__numeric_board, "white")
+            # check for terminal monomial
+            terminal_monomial = terminal_state(state, size, stride, numeric_board)
+            if terminal_monomial is not None:
+                self.render_terminal_state(terminal_monomial)
 
-            if terminal_white is not None:
-                terminal_white = sorted(terminal_white)
-                # x = np.argwhere(self.__numeric_board == terminal_white[0])[0]
-                # y = np.argwhere(self.__numeric_board == terminal_white[-1])[0]
-                self.render_terminal_state(terminal_white)
-                # self.render_line(x, y)
-            elif terminal_black is not None:
-                terminal_black = sorted(terminal_black)
-                # x = np.argwhere(self.__numeric_board == terminal_black[0])[0]
-                # y = np.argwhere(self.__numeric_board == terminal_black[-1])[0]
-                # self.render_line(x, y)
-                self.render_terminal_state(terminal_black)
+                if self.__available_moves.flatten()[terminal_monomial][0] == 1:
+                    print('Black is in terminal state.')
+                else:
+                    print('White is in terminal state.')
 
     def make_move(self, color, open_ns):
-        """For AI move."""
+        """
+
+        :param color:
+        :param open_ns:
+        :return:
+        """
         assert type(color) == str
+        # unique_cells = list(sorted(set(reduce(lambda a, b: a + b, map(list, open_ns)))))
+        # count = {cell: 0 for cell in unique_cells}
+        #
+        # for open_n in open_ns:
+        #     for number in open_n:
+        #         count[number] += 1
+        # max_count = max(count.values())
+        # # print(f'max_count: {max_count}')
+        #
+        # keys = []
+        # for key in count:
+        #     if count[key] == max_count:
+        #         keys.append(key)
+        #         # keys.append({key: count[key]})
+        #
+        # ai_scores = []
+        # player_scores = []
+        #
+        # for key in keys:
+        #     ai_scores.append(self.__score_board["black"].flatten()[key])
+        #     player_scores.append(self.__score_board["white"].flatten()[key])
+        #
+        # print(f'ai_scores: {ai_scores}')
+        # print(f'player_scores: {player_scores}')
+        #
+        # # maximize ai score, minimize player score
+        # # minimize player
+        # # get max value from player
+        # max_player = max(player_scores)
+        # max_player_indices = []
+        # for index, player_score in enumerate(player_scores):
+        #     if player_score == max_player:
+        #         max_player_indices.append(index)
+        # print(f'max_player_indices: {max_player_indices}')
+        # ai_scores = np.array(ai_scores)
+        # ai_scores_from_player = ai_scores[max_player_indices]
+        # max_ai_score = max(ai_scores_from_player)
+        # max_ai_score_indices = np.argwhere(np.array(ai_scores_from_player) == max_ai_score).flatten()
+        # max_indices = np.array(np.array(keys)[max_ai_score_indices]).tolist()
+        # print(f'max_indices: {max_indices}')
+        # print(f'ai_scores_from_player: {ai_scores_from_player}')
 
         scores = []
         for open__ in open_ns:
+            # if len(set(open__).intersection(set(max_indices))) > 0:
             scores.append(np.sum(self.__score_board[color].flatten()[[open__]]))
 
-        # TODO BREAKS HERE STAHP
         max_score = int(np.argmax(np.array(scores)))
-
         monomial_n = list(open_ns[max_score])
 
         # filter non zeros out
@@ -196,7 +259,10 @@ class Gomoku:
         self.render_move([x, y], "black")
 
     def __ai_move(self):
-        """Make move based on score boards."""
+        """
+
+        :return:
+        """
         state = self.__available_moves
         moves = self.__player_moves
         color = "black"
@@ -220,16 +286,32 @@ class Gomoku:
         length = monomial_length_black
 
         # TODO redo this block
-        if self.last_max_size["black"] == 4 and self.last_max_size["white"] <= monomial_length_white:
-            length = self.last_max_size["black"]
-        elif monomial_length_white >= 3 and monomial_length_black < 4:
+        if monomial_length_white >= 2:
             color = "white"
             length = monomial_length_white
+        # if self.last_max_size["black"] == 4 and self.last_max_size["white"] <= monomial_length_white:
+        #     length = self.last_max_size["black"]
+        # elif monomial_length_white >= 3 and monomial_length_black < 4:
+        #     color = "white"
+        #     length = monomial_length_white
 
         self.last_max_size["black"] = monomial_length_black
         self.last_max_size["white"] = monomial_length_white
 
         color_number = 1 if color == "black" else 2
+        test_dict1 = dict()
+        for i in range(5):
+            test_dict1[i+1] = open_n(state, self.__numeric_board, 5, self.__size, self.__neighboring_monomial, 1, i + 1)
+        test_dict2 = dict()
+        for i in range(5):
+            test_dict2[i+1] = open_n(state, self.__numeric_board, 5, self.__size, self.__neighboring_monomial, 2, i + 1)
+
+        print(f'for black')
+        for i in range(5):
+            print(f'number of open {i+1} monomials: {len(test_dict1[i+1])}')
+        print(f'for white')
+        for i in range(5):
+            print(f'number of open {i+1} monomials: {len(test_dict2[i+1])}')
 
         open_ns = open_n(
             state=state,
@@ -242,6 +324,14 @@ class Gomoku:
         )
 
         self.make_move(color, open_ns)
+
+        print(f'for black')
+        for i in range(5):
+            print(f'number of open {i+1} monomials: {len(test_dict1[i+1])}')
+        print(f'for white')
+        for i in range(5):
+            print(f'number of open {i+1} monomials: {len(test_dict2[i+1])}')
+
 
         del state, moves
 
@@ -263,13 +353,24 @@ class Gomoku:
                 i = inverted_operation(i, 1)
 
     def update_score(self, coordinate, color, weight=5):
-        """Update player's score board."""
-        self.__update(coordinate, color, np.add, 5, weight, 3)
+        """
+
+        :param coordinate:
+        :param color:
+        :param weight:
+        :return:
+        """
+        self.__update(coordinate, color, np.add, 5, weight)
         color = "white" if color == "black" else "white"
         self.__update(coordinate, color, np.subtract, 1, weight)
 
     def render_move(self, coordinate, color):
-        """Render a players move with image of a stone."""
+        """
+
+        :param coordinate:
+        :param color:
+        :return:
+        """
         x, y = coordinate
         self.update_score(coordinate, color)
         self.__available_moves[x, y] = 2 if color == "white" else 1
@@ -279,16 +380,14 @@ class Gomoku:
         self.__fig.canvas.draw()
 
     def render_terminal_state(self, monomial):
+        """
+
+        :param monomial:
+        :return:
+        """
 
         for number in monomial:
             coordinate = np.argwhere(self.__numeric_board == number)[0]
             ab = AnnotationBbox(self.stone_image_boxes["red"], coordinate, frameon=False)
             self.__ax.add_artist(ab)
         self.__fig.canvas.draw()
-    # def render_line(self, p1, p2):
-    #     """Render a line indicating a terminal state."""
-    #     x = sorted([p1[0], p2[0]])
-    #     y = sorted([p1[1], p2[1]])
-    #     print(f'test: \nx: {x}\ny: {y}')
-    #     self.__ax.add_line(lines.Line2D(x, y))
-    #     self.__fig.canvas.draw()
